@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>エンタープライズ級 クラウドネイティブBMI測定システム</title>
+    <style>
+        body {
+            background-color: #0a0a0a;
+            color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #00ff00;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
+        }
+        h1 {
+            font-size: 1.2rem;
+            border-bottom: 1px dashed #00ff00;
+            padding-bottom: 10px;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: inline-block;
+            width: 150px;
+        }
+        input {
+            background-color: #000;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        button {
+            background-color: #00ff00;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            font-family: 'Courier New', Courier, monospace;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #00cc00;
+        }
+        button:disabled {
+            background-color: #004400;
+            color: #00aa00;
+            cursor: not-allowed;
+        }
+        #console-output {
+            margin-top: 20px;
+            white-space: pre-wrap;
+            min-height: 150px;
+            border: 1px solid #004400;
+            padding: 10px;
+            background-color: #050505;
+        }
+        .cursor {
+            animation: blink 1s step-end infinite;
+        }
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        .disclaimer {
+            margin-top: 30px;
+            font-size: 0.8rem;
+            color: #00aa00;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>[ENTERPRISE CLOUD] ネイティブBMI解析エンジン v9.0.1</h1>
+    
+    <div class="input-group">
+        <label for="height">生体データ(身長)[cm]:</label>
+        <input type="number" id="height" step="0.1" placeholder="例: 170.0">
+    </div>
+    <div class="input-group">
+        <label for="weight">生体データ(体重)[kg]:</label>
+        <input type="number" id="weight" step="0.1" placeholder="例: 65.0">
+    </div>
+    
+    <button id="calc-btn" onclick="executeSystem()">[ 解析シーケンス開始 ]</button>
+
+    <div id="console-output">システム待機中...<span class="cursor">_</span></div>
+
+    <div class="disclaimer">
+        ※警告: 本システムはエイプリルフール用に設計されています。<br>
+        高度な非同期処理と暗号化アルゴリズムを使用していますが、最終的な計算は単なる割り算です。
+    </div>
+</div>
+
+<script>
+    // 汎用的な遅延関数（無駄な待機用）
+    const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    // UIコンソールへの出力用関数
+    const terminal = document.getElementById('console-output');
+    async function printToConsole(text, speed = 30) {
+        for (let i = 0; i < text.length; i++) {
+            terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
+            terminal.innerHTML += text.charAt(i) + '<span class="cursor">_</span>';
+            await delay(speed);
+        }
+    }
+
+    async function clearConsole() {
+        terminal.innerHTML = '<span class="cursor">_</span>';
+    }
+
+    // --- 過剰設計（オーバーエンジニアリング）されたクラス群 ---
+
+    class MedicalDataProcessor {
+        async process(value) {
+            throw new Error("このメソッドはサブクラスで実装される必要があります。");
+        }
+    }
+
+    class HeightNormalizer extends MedicalDataProcessor {
+        async process(value) {
+            if (value <= 0 || isNaN(value)) throw new Error("身長データが不正です。");
+            // 意味のない三角関数の計算 (Math.sin(Math.PI) はほぼ0)
+            const sineWaveVariance = Math.sin(Math.PI);
+            return (value / 100.0) + sineWaveVariance;
+        }
+    }
+
+    class WeightValidator extends MedicalDataProcessor {
+        async process(value) {
+            if (value <= 0 || isNaN(value)) throw new Error("体重データが不正です。");
+            
+            // Web Crypto APIを使用した無意味なSHA-256ハッシュ計算によるリソース浪費
+            const encoder = new TextEncoder();
+            const data = encoder.encode(value.toString());
+            await crypto.subtle.digest('SHA-256', data); 
+            // ハッシュ値はどこにも使わずに元の値を返す
+            
+            return value;
+        }
+    }
+
+    // --- メイン処理 ---
+
+    async function executeSystem() {
+        const heightInput = parseFloat(document.getElementById('height').value);
+        const weightInput = parseFloat(document.getElementById('weight').value);
+        const btn = document.getElementById('calc-btn');
+
+        btn.disabled = true;
+        await clearConsole();
+
+        try {
+            await printToConsole("> セキュア通信モジュールを初期化中...\n", 20);
+            await delay(800);
+            
+            await printToConsole("> 量子医療データベースとのP2P接続を確立中", 20);
+            for(let i=0; i<5; i++) {
+                await printToConsole(".", 100);
+                await delay(300);
+            }
+            await printToConsole(" [OK]\n", 10);
+
+            await printToConsole("> 生体データの暗号化および正当性検証プロセスを実行中", 20);
+            
+            const hNorm = new HeightNormalizer();
+            const wVal = new WeightValidator();
+            
+            for(let i=0; i<3; i++) {
+                await printToConsole(".", 100);
+                await delay(400);
+            }
+            
+            // 過剰設計クラスを利用したデータ処理
+            const h_m = await hNorm.process(heightInput);
+            const w_kg = await wVal.process(weightInput);
+            
+            await printToConsole(" [検証完了]\n\n", 10);
+            await delay(500);
+
+            await printToConsole("> ディープラーニングモデルによる生体指数の算出中...\n", 20);
+            await delay(1200);
+
+            // 実際の計算 ($BMI = \frac{W}{H^2}$)
+            const bmi = w_kg / Math.pow(h_m, 2);
+            
+            await printToConsole("========================================\n", 10);
+            await printToConsole(`【最終診断結果】 算出されたBMI指標: ${bmi.toFixed(2)}\n`, 20);
+            await printToConsole("========================================\n", 10);
+            await printToConsole("> プロセス終了。セッションを破棄します。\n", 20);
+
+        } catch (error) {
+            await printToConsole(`\n[CRITICAL ERROR] ${error.message}\n`, 10);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
