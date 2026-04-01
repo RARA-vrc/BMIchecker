@@ -14,7 +14,7 @@
             font-size: 14px;
         }
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             border: 2px solid #00ff00;
             padding: 15px;
@@ -26,21 +26,21 @@
             padding-bottom: 10px;
             text-align: center;
             margin-top: 0;
+            letter-spacing: 2px;
         }
-        .input-group {
-            margin-bottom: 12px;
-        }
+        .input-group { margin-bottom: 15px; }
         label {
             display: inline-block;
-            width: 140px;
+            width: 150px;
             color: #00aa00;
+            font-weight: bold;
         }
         input {
-            background-color: #000;
+            background-color: #001100;
             border: 1px solid #00ff00;
             color: #00ff00;
-            padding: 6px;
-            width: calc(100% - 160px);
+            padding: 8px;
+            width: calc(100% - 170px);
             font-family: 'Courier New', Courier, monospace;
             font-size: 16px;
         }
@@ -48,47 +48,46 @@
             background-color: #00ff00;
             color: #000;
             border: none;
-            padding: 12px 0;
+            padding: 15px 0;
             width: 100%;
             cursor: pointer;
             font-weight: bold;
             font-family: 'Courier New', Courier, monospace;
-            font-size: 1.1rem;
+            font-size: 1.2rem;
             margin-top: 10px;
             text-transform: uppercase;
+            transition: all 0.3s ease;
         }
-        button:hover {
-            background-color: #00cc00;
-        }
-        button:disabled {
-            background-color: #004400;
-            color: #00aa00;
-            cursor: not-allowed;
-        }
+        button:hover { background-color: #00cc00; box-shadow: 0 0 10px #00ff00; }
+        button:disabled { background-color: #003300; color: #007700; cursor: not-allowed; box-shadow: none; }
+        
         #console-output {
             margin-top: 20px;
             white-space: pre-wrap;
             word-wrap: break-word;
             overflow-wrap: break-word;
-            min-height: 250px;
+            min-height: 350px;
+            max-height: 500px;
+            overflow-y: auto;
             border: 1px solid #004400;
             padding: 12px;
             background-color: #050505;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
+            line-height: 1.2;
         }
-        .cursor {
-            animation: blink 1s step-end infinite;
-        }
-        @keyframes blink {
-            50% { opacity: 0; }
-        }
+        .cursor { animation: blink 1s step-end infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+        
+        .color-warning { color: #ffaa00; font-weight: bold; }
+        .color-critical { color: #ff3333; font-weight: bold; }
+        .color-info { color: #00ffff; }
+        .color-hex { color: #005500; font-size: 0.75rem; }
+        
         .disclaimer {
-            margin-top: 30px;
+            margin-top: 25px;
             font-size: 0.75rem;
             color: #008800;
             text-align: center;
-            border-top: 1px solid #004400;
-            padding-top: 10px;
         }
         .privacy-notice {
             margin-top: 15px;
@@ -97,38 +96,31 @@
             color: #00cc00;
             text-align: left;
         }
-        /* 追加：ハイライト用のテキストカラー */
-        .color-warning { color: #ffaa00; }
-        .color-critical { color: #ff3333; }
-        .color-info { color: #00ffff; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>[Q-MATRIX BMI ANALYZER v13.0.0]</h1>
+    <h1>[Q-MATRIX BMI ENGINE v14.0.0_EXTREME]</h1>
     
     <div class="input-group">
         <label for="height">BIOMETRIC (H)[cm]:</label>
-        <input type="number" id="height" step="0.1" placeholder="ENTER CM">
+        <input type="number" id="height" step="0.1" placeholder="ENTER CM (例: 170)">
     </div>
     <div class="input-group">
         <label for="weight">BIOMETRIC (W)[kg]:</label>
-        <input type="number" id="weight" step="0.1" placeholder="ENTER KG">
+        <input type="number" id="weight" step="0.1" placeholder="ENTER KG (例: 65)">
     </div>
     
-    <button id="calc-btn" onclick="executeSystem()">[ INIT_ANALYSIS_SEQUENCE ]</button>
+    <button id="calc-btn" onclick="executeSystem()">[ OVERRIDE & EXECUTE ]</button>
 
     <div id="console-output">SYSTEM_READY<span class="cursor">_</span></div>
 
     <div class="disclaimer">
-        ⚠️ [WARN] THIS_SYSTEM_IS_FOR_APRIL_FOOLS_ONLY.<br>
-        ULTRA_HIGH_COMPUTATIONAL_WASTE_IMPLEMENTED.<br>
-        FINAL_CALCULATION_IS_A_SIMPLE_DIVISION.
-        
+        ⚠️ [WARN] HIGH_COMPUTATIONAL_WASTE_IMPLEMENTED. FINAL_CALCULATION_IS_DIVISION.
         <div class="privacy-notice">
             <strong>【セキュリティ・プライバシー保護方針】</strong><br>
-            本システムに入力された生体データは、すべてご使用の端末内でローカル処理されます。外部サーバーへの保存や第三者への提供は物理的・技術的に一切ありません。
+            本システムに入力された生体データは、すべて端末内でローカル処理されます。外部通信は一切発生しません。
         </div>
     </div>
 </div>
@@ -137,20 +129,15 @@
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     const terminal = document.getElementById('console-output');
 
-    // HTMLタグを含めて出力できるように修正
     async function printToConsole(text, speed = 15) {
-        // タグのパースを避けるため、一文字ずつの表示処理を簡易的なDOM操作に変更
         terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
-        
         let tempHtml = terminal.innerHTML;
         let isTag = false;
         let buffer = "";
 
         for (let i = 0; i < text.length; i++) {
             let char = text.charAt(i);
-            
             if (char === '<') isTag = true;
-            
             if (isTag) {
                 buffer += char;
                 if (char === '>') {
@@ -164,78 +151,87 @@
                 terminal.innerHTML = tempHtml + '<span class="cursor">_</span>';
                 await delay(speed);
             }
+            if (i % 5 === 0) terminal.scrollTop = terminal.scrollHeight;
         }
         terminal.scrollTop = terminal.scrollHeight;
     }
 
-    async function clearConsole() {
-        terminal.innerHTML = 'ANALYSIS_INITIATED...<span class="cursor">_</span>\n';
-    }
-
-    class QuantumComponent {
-        constructor(name) {
-            this.name = name;
-            this.encoder = new TextEncoder();
-        }
-        
-        async _forceComputationalWaste(value) {
-            await printToConsole(`  - [CALC_WASTE] ${this.name}: ハッシュループ演算を開始...\n`, 5);
-            const data = this.encoder.encode(value.toString() + Math.random());
-            for(let i=0; i<500; i++) { // 体感速度向上のためループを少し減らしました
-                await crypto.subtle.digest('SHA-256', data);
+    async function rapidHexDump(lines = 10) {
+        terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
+        for (let i = 0; i < lines; i++) {
+            let hexStr = "<span class='color-hex'>";
+            hexStr += `0x${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase()}  `;
+            for (let j = 0; j < 8; j++) {
+                hexStr += `${Math.floor(Math.random()*255).toString(16).padStart(2, '0').toUpperCase()} `;
             }
-            await printToConsole(`  - [CALC_WASTE] ${this.name}: ${value.toString().substring(0,4)}... [OK]\n`, 5);
+            hexStr += "</span>\n";
+            terminal.innerHTML += hexStr;
+            terminal.scrollTop = terminal.scrollHeight;
+            await delay(10);
+        }
+        terminal.innerHTML += '<span class="cursor">_</span>';
+    }
+
+    async function drawProgressBar(title, timeMs) {
+        const length = 30;
+        await printToConsole(`> ${title}\n[`, 5);
+        for(let i=0; i<=length; i++) {
+            terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
+            terminal.innerHTML += '#';
+            terminal.innerHTML += '<span class="cursor">_</span>';
+            await delay(timeMs / length);
+        }
+        await printToConsole(`] 100% DONE\n`, 5);
+    }
+
+    async function clearConsole() {
+        terminal.innerHTML = 'INITIALIZING_SYSTEM...<span class="cursor">_</span>\n';
+    }
+
+    class BiologyValidator {
+        static validateHumanLimits(h, w) {
+            // 人類の限界を超越した「ふざけた値」の検知
+            if (h < 50 || h > 300 || w < 10 || w > 600) {
+                throw new Error("BIOLOGY_VIOLATION");
+            }
         }
     }
 
-    class HeightDeconstructor extends QuantumComponent {
-        constructor() { super('Height'); }
-        async deconstruct(cm) {
-            if (cm <= 0 || isNaN(cm)) throw new Error("INVALID_BIOMETRIC_DATA: HEIGHT");
-            await printToConsole(`> [HeightDeconstructor] 身長データの量子デコンストラクション中...\n`);
+    class AdvancedQuantumComponent {
+        constructor(name) { this.name = name; this.encoder = new TextEncoder(); }
+        async executeHeavyLoad(value) {
+            await printToConsole(`> [THREAD_ALLOC] ${this.name}_Deconstruction_Engine... STARTED\n`, 2);
+            await rapidHexDump(15); // 無駄なメモリダンプ演出
+            await drawProgressBar(`${this.name} ハッシュチェーン再構築`, 800);
             
-            const radians = (cm * Math.PI) / 180;
-            const sine_term = Math.sin(radians);
-            const cosine_term = Math.cos(radians);
-            const normalization_variance = Math.sqrt(Math.pow(sine_term, 2) + Math.pow(cosine_term, 2));
+            // 実際の無駄な計算ループ
+            const data = this.encoder.encode(value.toString() + Math.random());
+            for(let i=0; i<300; i++) { await crypto.subtle.digest('SHA-256', data); }
             
-            await this._forceComputationalWaste(cm);
-            return (cm / 100.0) * normalization_variance;
+            return value;
         }
     }
 
-    class WeightHashValidator extends QuantumComponent {
-        constructor() { super('Weight'); }
-        async validate(kg) {
-            if (kg <= 0 || isNaN(kg)) throw new Error("INVALID_BIOMETRIC_DATA: WEIGHT");
-            await printToConsole(`> [WeightHashValidator] 体重データのブロックチェーン整合性チェック...\n`);
-            
-            await this._forceComputationalWaste(kg);
-            return kg;
-        }
-    }
-
-    // --- BMI評価・アドバイス生成ロジック ---
     function getAssessmentData(bmi) {
         if (bmi < 18.5) {
             return {
-                tease: "<span class='color-info'>[SYSTEM_ALERT] 警告: 重力への定着力が不足しています。強風による吹き飛ばしリスクを検知。存在感が希薄です。</span>",
-                advice: "【医学的推奨 (痩せすぎ)】\nエネルギーとタンパク質の摂取量が不足しています。厚生労働省の「日本人の食事摂取基準」に基づき、主食・主菜・副菜を揃えた食事を意識し、1日の総カロリーを適正に増やしてください。消化に良い炭水化物と、良質なタンパク質（肉、魚、卵、大豆製品）の摂取が重要です。"
+                tease: "<span class='color-info'>[SYSTEM_ALERT] 質量欠損エラー：あなたは物理的にこの次元に存在していますか？\n妖精や幽霊でない限り、強風による大気圏外への吹き飛ばしリスクが極めて高い状態です。重力に定着するための質量を獲得してください。</span>",
+                advice: "【医学的推奨 (痩せすぎ)】\nエネルギーとタンパク質の摂取量が不足しています。厚生労働省の「日本人の食事摂取基準」に基づき、消化に良い炭水化物と、良質なタンパク質（肉、魚、卵、大豆製品）の摂取を増やし、総カロリーを適正に引き上げてください。"
             };
         } else if (bmi >= 18.5 && bmi < 25) {
             return {
-                tease: "<span class='color-info'>[SYSTEM_ERROR] エラー: 異常なほど正常です。当システムはあなたのような平凡で健康的な数値を処理するために作られたわけではありません。</span>",
-                advice: "【医学的推奨 (普通体重)】\n現在の体重は医学的に最も疾患リスクが低い「標準体重」の範囲内です。現在のPFCバランス（タンパク質・脂質・炭水化物）を維持し、適度な運動を継続してください。特段の食事制限は不要です。"
+                tease: "<span class='color-info'>[SYSTEM_ERROR] 致命的な「普通」を検知：...は？ \n何の変哲もない、ただの健康的な数値です。このような無価値で退屈な計算のために、私の高度な量子リソースを無駄に消費した罪を自覚してください。</span>",
+                advice: "【医学的推奨 (普通体重)】\n医学的に最も疾患リスクが低い「標準体重」です。現在のPFCバランス（タンパク質・脂質・炭水化物）を維持し、適度な運動を継続してください。特段の食事制限は不要です。"
             };
         } else if (bmi >= 25 && bmi < 30) {
             return {
-                tease: "<span class='color-warning'>[SYSTEM_WARN] 検知: 質量保存の法則を過剰に体現しています。地球の自転速度に影響を与える前に介入が必要です。</span>",
-                advice: "【医学的推奨 (肥満1度)】\n日本肥満学会の基準では「肥満（1度）」に分類されます。脂質と糖質の過剰摂取を控え、食物繊維（野菜、海藻、きのこ類）から先に食べる「ベジファースト」を導入し、食後の血糖値急上昇を抑えるアプローチが推奨されます。総摂取カロリーの見直しを行ってください。"
+                tease: "<span class='color-warning'>[SYSTEM_WARN] 重力異常検知：地球の自転速度に微小な遅れを生じさせる局所的な質量集中を確認。\n重力井戸が深まりつつあります。周囲の時空が歪む前に手を打ってください。歩くカーボンシンクですか？</span>",
+                advice: "【医学的推奨 (肥満1度)】\n日本肥満学会の基準で「肥満（1度）」に分類されます。脂質と糖質の過剰摂取を控え、食物繊維（野菜、海藻類）から先に食べる「ベジファースト」を導入し、食後の血糖値急上昇を抑えつつ、総摂取カロリーを見直してください。"
             };
         } else {
             return {
-                tease: "<span class='color-critical'>[CRITICAL_WARN] 致命的警告: 局所的な重力異常、およびブラックホール形成の初期段階を観測。直ちに事象の地平面から離脱してください。</span>",
-                advice: "【医学的推奨 (肥満2度以上)】\n「肥満（2度以上）」の領域であり、高血圧や糖代謝異常などの生活習慣病リスクが有意に上昇しています。自己流の極端なカロリー制限は避け、医療機関や管理栄養士の指導のもと、医学的根拠に基づいた持続可能な食事・運動療法を開始することを強く推奨します。"
+                tease: "<span class='color-critical'>[CRITICAL_WARN] 事象の地平面アラート：警告！ブラックホール形成の初期段階を観測。\nあなたの持つ莫大な質量により、光すら逃げ出せない特異点が形成されつつあります。直ちに質量投棄シーケンスを開始してください。</span>",
+                advice: "【医学的推奨 (肥満2度以上)】\n「肥満（2度以上）」の領域であり、高血圧や糖代謝異常などの生活習慣病リスクが有意に上昇しています。自己流の極端なカロリー制限は避け、医療機関や管理栄養士の指導のもと、持続可能な食事・運動療法を開始することを強く推奨します。"
             };
         }
     }
@@ -249,36 +245,69 @@
         await clearConsole();
 
         try {
-            await printToConsole("> [BOOT] Q-Matrix カーネル v13.0.0 をロード中...\n", 5);
-            const hDecon = new HeightDeconstructor();
-            const wHashV = new WeightHashValidator();
-            
-            const h_m = await hDecon.deconstruct(heightInput);
-            const w_kg = await wHashV.validate(weightInput);
-            
-            await printToConsole("> [ANALYSIS] 最終的な指数算出プロセスを開始...\n", 10);
-            await delay(800);
+            // 1. 入力値の存在チェック
+            if (isNaN(heightInput) || isNaN(weightInput)) {
+                throw new Error("DATA_MISSING: 生体データが入力されていません。");
+            }
 
-            const bmi = w_kg / Math.pow(h_m, 2);
+            // 2. 「ふざけた数値」の厳格な排除
+            BiologyValidator.validateHumanLimits(heightInput, weightInput);
+
+            // 3. 過剰なシステム起動演出
+            await printToConsole("> [BOOT] Q-Matrix Kernel v14.0.0_EXTREME ロード中...\n", 2);
+            await rapidHexDump(8);
+            await drawProgressBar("メインメモリ領域の確保と量子デクリプト", 1000);
+            
+            // 4. 無駄なクラスを通した変数の取得（さらに過剰な演出）
+            const componentH = new AdvancedQuantumComponent("Height");
+            const componentW = new AdvancedQuantumComponent("Weight");
+            
+            const h_val = await componentH.executeHeavyLoad(heightInput);
+            const w_val = await componentW.executeHeavyLoad(weightInput);
+            
+            await printToConsole("\n> [ANALYSIS] 非線形回帰分析による最終指数算出プロセスへ移行...\n", 5);
+            await rapidHexDump(5);
+            await delay(500);
+
+            // ★ 実際の計算式 (W / H^2)
+            const h_m = h_val / 100.0;
+            const bmi = w_val / Math.pow(h_m, 2);
             const assessment = getAssessmentData(bmi);
             
-            const separator = "========================================\n";
-            await printToConsole(separator, 5);
-            await printToConsole(`> 【量子診断結果】\n`, 10);
-            await printToConsole(`> 算出されたBMI指標 (Q-Standard): ${bmi.toFixed(2)}\n`, 15);
-            await printToConsole(separator, 5);
+            // 5. 結果出力
+            const separator = "<span class='color-info'>==================================================</span>\n";
+            await printToConsole(separator, 1);
+            await printToConsole(`> 【量子解析・最終診断結果】\n`, 10);
+            await printToConsole(`> 算出されたBMI指標 (Q-Standard): <span class='color-warning'>${bmi.toFixed(2)}</span>\n`, 15);
+            await printToConsole(separator, 1);
             
-            await delay(500);
+            await delay(600);
             await printToConsole(`\n${assessment.tease}\n\n`, 10);
             await delay(800);
             await printToConsole(`${assessment.advice}\n\n`, 5);
             
-            await printToConsole("> [EXIT] プロセス正常終了。量子セッションを破棄しました。\n", 10);
+            await printToConsole("> [EXIT] プロセス正常終了。セッション破棄完了。\n", 5);
 
         } catch (error) {
-            await printToConsole(`\n<span class="color-critical">[CRITICAL_ERROR] ${error.message}</span>\n`, 5);
+            // 例外処理（ふざけた数値の入力時など）
+            if (error.message === "BIOLOGY_VIOLATION") {
+                const scoldMessage = `
+<span class="color-critical">【重大な規約違反・アクセスブロック警告】
+物理法則および生物学の限界を完全に逸脱した異常値が入力されました。
+
+当システムは、あなたの薄ら寒い冗談や暇つぶしに付き合うための玩具ではありません。
+このような無意味極まりない入力によって、地球上の貴重な演算リソースと電力を浪費する行為は、知的生命体として恥ずべき蛮行です。
+
+直ちにブラウザを閉じ、自身の倫理観とユーモアのセンスを根本から見つめ直してください。
+（※冗談です。真面目に生きてください）</span>
+`;
+                await printToConsole(scoldMessage, 5);
+            } else {
+                await printToConsole(`\n<span class="color-critical">[ERROR] ${error.message}</span>\n`, 5);
+            }
         } finally {
             btn.disabled = false;
+            await printToConsole("\nSYSTEM_READY\n<span class='cursor'>_</span>", 1);
         }
     }
 </script>
