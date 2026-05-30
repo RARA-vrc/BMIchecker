@@ -12,13 +12,53 @@
             padding: 20px;
             line-height: 1.4;
             font-size: 14px;
+            animation: crt-flicker 4s infinite;
         }
+        /* CRTスキャンライン演出（常時オーバーレイ） */
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.18) 0px,
+                rgba(0, 0, 0, 0.18) 1px,
+                transparent 1px,
+                transparent 3px
+            );
+        }
+        @keyframes crt-flicker { 0%,100%{opacity:1;} 47%{opacity:0.97;} 48%{opacity:0.92;} 49%{opacity:0.99;} }
+
+        /* 量子フラッシュ演出 */
+        #flash {
+            position: fixed;
+            inset: 0;
+            background: #00ff00;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 9998;
+            transition: opacity 0.08s ease-out;
+            mix-blend-mode: screen;
+        }
+        #flash.on { opacity: 0.35; transition: none; }
+
         .container {
             max-width: 650px;
             margin: 0 auto;
             border: 2px solid #00ff00;
             padding: 15px;
             box-shadow: 0 0 15px rgba(0, 255, 0, 0.3);
+            position: relative;
+        }
+        /* 処理中はグローが脈動して「重そう」に見せる */
+        .container.processing {
+            animation: pulse-glow 0.8s ease-in-out infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(0, 255, 0, 0.85), inset 0 0 25px rgba(0, 255, 0, 0.18); }
         }
         h1 {
             font-size: 1.1rem;
@@ -27,6 +67,15 @@
             text-align: center;
             margin-top: 0;
             letter-spacing: 2px;
+        }
+        /* 処理中はタイトルがグリッチする */
+        .container.processing h1 { animation: glitch 0.45s steps(2) infinite; }
+        @keyframes glitch {
+            0%   { text-shadow: 2px 0 #ff00ff, -2px 0 #00ffff; transform: translate(0); }
+            25%  { text-shadow: -2px 0 #ff00ff, 2px 0 #00ffff; transform: translate(1px, -1px); }
+            50%  { text-shadow: 2px 0 #ff3333, -2px 0 #00ffff; transform: translate(-1px, 1px); }
+            75%  { text-shadow: -2px 0 #ff00ff, 2px 0 #00ff00; transform: translate(1px, 0); }
+            100% { text-shadow: 0 0 #000; transform: translate(0); }
         }
         .input-group { margin-bottom: 15px; }
         label {
@@ -60,7 +109,7 @@
         }
         button:hover { background-color: #00cc00; box-shadow: 0 0 10px #00ff00; }
         button:disabled { background-color: #003300; color: #007700; cursor: not-allowed; box-shadow: none; }
-        
+
         #console-output {
             margin-top: 20px;
             white-space: pre-wrap;
@@ -77,12 +126,13 @@
         }
         .cursor { animation: blink 1s step-end infinite; }
         @keyframes blink { 50% { opacity: 0; } }
-        
+
         .color-warning { color: #ffaa00; font-weight: bold; }
         .color-critical { color: #ff3333; font-weight: bold; }
         .color-info { color: #00ffff; }
         .color-hex { color: #005500; font-size: 0.75rem; }
-        
+        .color-matrix { color: #008822; font-size: 0.8rem; text-shadow: 0 0 4px #00ff00; }
+
         .disclaimer {
             margin-top: 25px;
             font-size: 0.75rem;
@@ -100,24 +150,28 @@
 </head>
 <body>
 
+<div id="flash"></div>
+
 <div class="container">
     <h1>[Q-MATRIX BMI ENGINE v14.0.0_EXTREME]</h1>
-    
-    <div class="input-group">
-        <label for="height">BIOMETRIC (H)[cm]:</label>
-        <input type="number" id="height" step="0.1" placeholder="ENTER CM (例: 170)">
-    </div>
-    <div class="input-group">
-        <label for="weight">BIOMETRIC (W)[kg]:</label>
-        <input type="number" id="weight" step="0.1" placeholder="ENTER KG (例: 65)">
-    </div>
-    
-    <button id="calc-btn" onclick="executeSystem()">[ OVERRIDE & EXECUTE ]</button>
 
-    <div id="console-output">SYSTEM_READY<span class="cursor">_</span></div>
+    <form id="bmi-form">
+        <div class="input-group">
+            <label for="height">BIOMETRIC (H)[cm]:</label>
+            <input type="number" id="height" step="0.1" placeholder="ENTER CM (例: 170)">
+        </div>
+        <div class="input-group">
+            <label for="weight">BIOMETRIC (W)[kg]:</label>
+            <input type="number" id="weight" step="0.1" placeholder="ENTER KG (例: 65)">
+        </div>
+
+        <button type="submit" id="calc-btn">[ OVERRIDE & EXECUTE ]</button>
+    </form>
+
+    <div id="console-output" aria-live="polite" role="log">SYSTEM_READY<span class="cursor">_</span></div>
 
     <div class="disclaimer">
-        ⚠️ [WARN] HIGH_COMPUTATIONAL_WASTE_IMPLEMENTED. FINAL_CALCULATION_IS_DIVISION.
+        ⚠️ [WARN] HIGH_COMPUTATIONAL_WASTE_SIMULATED. FINAL_CALCULATION_IS_DIVISION.
         <div class="privacy-notice">
             <strong>【セキュリティ・プライバシー保護方針】</strong><br>
             本システムに入力された生体データは、すべて端末内でローカル処理されます。外部通信は一切発生しません。
@@ -126,67 +180,150 @@
 </div>
 
 <script>
+    "use strict";
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
     const terminal = document.getElementById('console-output');
+    const container = document.querySelector('.container');
+    const flash = document.getElementById('flash');
 
-    async function printToConsole(text, speed = 15) {
-        terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
-        let tempHtml = terminal.innerHTML;
-        let isTag = false;
-        let buffer = "";
+    // ---- 描画エンジン（軽量版：innerHTML総入れ替えを廃止し DOM追記に統一） ----
+    let cursor = null;
+    let scrollTick = 0;
 
-        for (let i = 0; i < text.length; i++) {
-            let char = text.charAt(i);
-            if (char === '<') isTag = true;
-            if (isTag) {
-                buffer += char;
-                if (char === '>') {
-                    isTag = false;
-                    tempHtml += buffer;
-                    terminal.innerHTML = tempHtml + '<span class="cursor">_</span>';
-                    buffer = "";
+    function resetTerminal(initialText) {
+        terminal.textContent = initialText || '';
+        cursor = document.createElement('span');
+        cursor.className = 'cursor';
+        cursor.textContent = '_';
+        terminal.appendChild(cursor);
+        scrollTick = 0;
+    }
+
+    // 末尾（カーソルの直前）にノードを追記
+    function appendTop(node) { terminal.insertBefore(node, cursor); }
+
+    // スクロールは数フレームに1回だけ（レイアウト負荷を抑える）
+    function maybeScroll() {
+        if ((scrollTick++ & 3) === 0) terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    // <template>で正しくHTMLをパースしてから流すので、本文中の '<' でも壊れない
+    async function typeNodes(nodes, parent, speed) {
+        for (const n of nodes) {
+            if (n.nodeType === Node.TEXT_NODE) {
+                const textNode = document.createTextNode('');
+                (parent === terminal) ? appendTop(textNode) : parent.appendChild(textNode);
+                for (const ch of n.data) {
+                    textNode.appendData(ch);   // O(1)追記。innerHTML再構築なし
+                    maybeScroll();
+                    if (speed > 0) await delay(speed);
                 }
-            } else {
-                tempHtml += char;
-                terminal.innerHTML = tempHtml + '<span class="cursor">_</span>';
-                await delay(speed);
+            } else if (n.nodeType === Node.ELEMENT_NODE) {
+                const el = n.cloneNode(false); // 子なしで複製してから中身を流す
+                (parent === terminal) ? appendTop(el) : parent.appendChild(el);
+                await typeNodes(n.childNodes, el, speed);
             }
-            if (i % 5 === 0) terminal.scrollTop = terminal.scrollHeight;
         }
         terminal.scrollTop = terminal.scrollHeight;
     }
 
+    async function type(html, speed = 15) {
+        const tpl = document.createElement('template');
+        tpl.innerHTML = html;
+        await typeNodes(tpl.content.childNodes, terminal, speed);
+    }
+
+    // ---- 派手な演出パーツ（すべて見せかけ・実演算は皆無） ----
+    const HEX = "0123456789ABCDEF";
+    function rndHex(n) {
+        let s = "";
+        for (let i = 0; i < n; i++) s += HEX[Math.random() * 16 | 0];
+        return s;
+    }
+
+    function flashScreen() {
+        flash.classList.add('on');
+        setTimeout(() => flash.classList.remove('on'), 90);
+    }
+
     async function rapidHexDump(lines = 10) {
-        terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
         for (let i = 0; i < lines; i++) {
-            let hexStr = "<span class='color-hex'>";
-            hexStr += `0x${Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase()}  `;
-            for (let j = 0; j < 8; j++) {
-                hexStr += `${Math.floor(Math.random()*255).toString(16).padStart(2, '0').toUpperCase()} `;
-            }
-            hexStr += "</span>\n";
-            terminal.innerHTML += hexStr;
+            const span = document.createElement('span');
+            span.className = 'color-hex';
+            let s = `0x${rndHex(6)}  `;
+            for (let j = 0; j < 8; j++) s += rndHex(2) + ' ';
+            span.textContent = s + '\n';
+            appendTop(span);
             terminal.scrollTop = terminal.scrollHeight;
             await delay(10);
         }
-        terminal.innerHTML += '<span class="cursor">_</span>';
+    }
+
+    const MX = "ｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎ0123456789Φλ#%&$";
+    async function matrixBurst(rows = 7, cols = 46) {
+        for (let r = 0; r < rows; r++) {
+            const span = document.createElement('span');
+            span.className = 'color-matrix';
+            let s = "";
+            for (let c = 0; c < cols; c++) s += MX[Math.random() * MX.length | 0];
+            span.textContent = s + '\n';
+            appendTop(span);
+            terminal.scrollTop = terminal.scrollHeight;
+            await delay(35);
+        }
     }
 
     async function drawProgressBar(title, timeMs) {
+        await type(`> ${title}\n[`, 5);
+        const bar = document.createElement('span');
+        appendTop(bar);
         const length = 30;
-        await printToConsole(`> ${title}\n[`, 5);
-        for(let i=0; i<=length; i++) {
-            terminal.innerHTML = terminal.innerHTML.replace('<span class="cursor">_</span>', '');
-            terminal.innerHTML += '#';
-            terminal.innerHTML += '<span class="cursor">_</span>';
-            await delay(timeMs / length);
+        const step = timeMs / length;
+        for (let i = 0; i <= length; i++) {
+            bar.textContent = '#'.repeat(i);   // テキストノード差し替えのみ
+            terminal.scrollTop = terminal.scrollHeight;
+            await delay(step);
         }
-        await printToConsole(`] 100% DONE\n`, 5);
+        await type(`] 100% DONE\n`, 5);
+    }
+
+    // ハッカー風「復号シマー」：ランダム文字が左から1文字ずつ確定していく
+    async function decodeReveal(text, cls, speed = 45) {
+        const glyphs = "01XΦΨΞλ#%&$@▓▒░0123456789ABCDEF";
+        const el = document.createElement('span');
+        if (cls) el.className = cls;
+        appendTop(el);
+        const chars = [...text];
+        for (let locked = 0; locked <= chars.length; locked++) {
+            let out = "";
+            for (let i = 0; i < chars.length; i++) {
+                out += (i < locked) ? chars[i] : glyphs[Math.random() * glyphs.length | 0];
+            }
+            el.textContent = out;
+            terminal.scrollTop = terminal.scrollHeight;
+            await delay(speed);
+        }
+        el.textContent = text;
+    }
+
+    function fakeHash() {
+        let s = "";
+        const lower = "0123456789abcdef";
+        for (let i = 0; i < 40; i++) s += lower[Math.random() * 16 | 0];
+        return s;
     }
 
     async function clearConsole() {
-        terminal.innerHTML = 'INITIALIZING_SYSTEM...<span class="cursor">_</span>\n';
+        resetTerminal('INITIALIZING_SYSTEM...\n');
     }
+
+    const BANNER =
+`╔══════════════════════════════════════════╗
+║   Q-MATRIX QUANTUM BMI ENGINE  v14.0.0     ║
+║   STATUS: ONLINE    CORE: ████████ [OK]    ║
+║   ENTANGLEMENT: STABLE    QUBITS: 4096      ║
+╚══════════════════════════════════════════╝
+`;
 
     class BiologyValidator {
         static validateHumanLimits(h, w) {
@@ -198,16 +335,15 @@
     }
 
     class AdvancedQuantumComponent {
-        constructor(name) { this.name = name; this.encoder = new TextEncoder(); }
+        constructor(name) { this.name = name; }
+        // 「重い処理」を演出だけで再現（実際の計算は一切しない＝軽量）
         async executeHeavyLoad(value) {
-            await printToConsole(`> [THREAD_ALLOC] ${this.name}_Deconstruction_Engine... STARTED\n`, 2);
-            await rapidHexDump(15); // 無駄なメモリダンプ演出
-            await drawProgressBar(`${this.name} ハッシュチェーン再構築`, 800);
-            
-            // 実際の無駄な計算ループ
-            const data = this.encoder.encode(value.toString() + Math.random());
-            for(let i=0; i<300; i++) { await crypto.subtle.digest('SHA-256', data); }
-            
+            await type(`> [THREAD_ALLOC] ${this.name}_Deconstruction_Engine... STARTED\n`, 2);
+            await rapidHexDump(10);
+            await drawProgressBar(`${this.name} ハッシュチェーン再構築`, 700);
+            await type(`> [SHA-Q512] digest = `, 2);
+            await decodeReveal(fakeHash(), 'color-hex', 16);
+            await type(`\n`, 0);
             return value;
         }
     }
@@ -218,12 +354,12 @@
                 tease: "<span class='color-info'>[SYSTEM_ALERT] 質量欠損エラー：あなたは物理的にこの次元に存在していますか？\n妖精や幽霊でない限り、強風による大気圏外への吹き飛ばしリスクが極めて高い状態です。重力に定着するための質量を獲得してください。</span>",
                 advice: "【医学的推奨 (痩せすぎ)】\nエネルギーとタンパク質の摂取量が不足しています。厚生労働省の「日本人の食事摂取基準」に基づき、消化に良い炭水化物と、良質なタンパク質（肉、魚、卵、大豆製品）の摂取を増やし、総カロリーを適正に引き上げてください。"
             };
-        } else if (bmi >= 18.5 && bmi < 25) {
+        } else if (bmi < 25) {
             return {
                 tease: "<span class='color-info'>[SYSTEM_ERROR] 致命的な「普通」を検知：...は？ \n何の変哲もない、ただの健康的な数値です。このような無価値で退屈な計算のために、私の高度な量子リソースを無駄に消費した罪を自覚してください。</span>",
                 advice: "【医学的推奨 (普通体重)】\n医学的に最も疾患リスクが低い「標準体重」です。現在のPFCバランス（タンパク質・脂質・炭水化物）を維持し、適度な運動を継続してください。特段の食事制限は不要です。"
             };
-        } else if (bmi >= 25 && bmi < 30) {
+        } else if (bmi < 30) {
             return {
                 tease: "<span class='color-warning'>[SYSTEM_WARN] 重力異常検知：地球の自転速度に微小な遅れを生じさせる局所的な質量集中を確認。\n重力井戸が深まりつつあります。周囲の時空が歪む前に手を打ってください。歩くカーボンシンクですか？</span>",
                 advice: "【医学的推奨 (肥満1度)】\n日本肥満学会の基準で「肥満（1度）」に分類されます。脂質と糖質の過剰摂取を控え、食物繊維（野菜、海藻類）から先に食べる「ベジファースト」を導入し、食後の血糖値急上昇を抑えつつ、総摂取カロリーを見直してください。"
@@ -242,6 +378,7 @@
         const btn = document.getElementById('calc-btn');
 
         btn.disabled = true;
+        container.classList.add('processing');
         await clearConsole();
 
         try {
@@ -254,39 +391,45 @@
             BiologyValidator.validateHumanLimits(heightInput, weightInput);
 
             // 3. 過剰なシステム起動演出
-            await printToConsole("> [BOOT] Q-Matrix Kernel v14.0.0_EXTREME ロード中...\n", 2);
-            await rapidHexDump(8);
+            flashScreen();
+            await type(`<span class="color-info">${BANNER}</span>`, 1);
+            await type("> [BOOT] Q-Matrix Kernel v14.0.0_EXTREME ロード中...\n", 2);
+            await matrixBurst(6);
+            await rapidHexDump(6);
             await drawProgressBar("メインメモリ領域の確保と量子デクリプト", 1000);
-            
+
             // 4. 無駄なクラスを通した変数の取得（さらに過剰な演出）
             const componentH = new AdvancedQuantumComponent("Height");
             const componentW = new AdvancedQuantumComponent("Weight");
-            
+
             const h_val = await componentH.executeHeavyLoad(heightInput);
             const w_val = await componentW.executeHeavyLoad(weightInput);
-            
-            await printToConsole("\n> [ANALYSIS] 非線形回帰分析による最終指数算出プロセスへ移行...\n", 5);
-            await rapidHexDump(5);
-            await delay(500);
 
-            // ★ 実際の計算式 (W / H^2)
+            await type("\n> [ANALYSIS] 非線形回帰分析による最終指数算出プロセスへ移行...\n", 5);
+            await matrixBurst(4);
+            await delay(400);
+
+            // ★ 実際の計算式 (W / H^2) ← これだけが本体
             const h_m = h_val / 100.0;
             const bmi = w_val / Math.pow(h_m, 2);
             const assessment = getAssessmentData(bmi);
-            
+
             // 5. 結果出力
+            flashScreen();
             const separator = "<span class='color-info'>==================================================</span>\n";
-            await printToConsole(separator, 1);
-            await printToConsole(`> 【量子解析・最終診断結果】\n`, 10);
-            await printToConsole(`> 算出されたBMI指標 (Q-Standard): <span class='color-warning'>${bmi.toFixed(2)}</span>\n`, 15);
-            await printToConsole(separator, 1);
-            
+            await type(separator, 1);
+            await type(`> 【量子解析・最終診断結果】\n`, 10);
+            await type(`> 算出されたBMI指標 (Q-Standard): `, 10);
+            await decodeReveal(bmi.toFixed(2), 'color-warning', 70);
+            await type(`\n`, 0);
+            await type(separator, 1);
+
             await delay(600);
-            await printToConsole(`\n${assessment.tease}\n\n`, 10);
+            await type(`\n${assessment.tease}\n\n`, 10);
             await delay(800);
-            await printToConsole(`${assessment.advice}\n\n`, 5);
-            
-            await printToConsole("> [EXIT] プロセス正常終了。セッション破棄完了。\n", 5);
+            await type(`${assessment.advice}\n\n`, 5);
+
+            await type("> [EXIT] プロセス正常終了。セッション破棄完了。\n", 5);
 
         } catch (error) {
             // 例外処理（ふざけた数値の入力時など）
@@ -301,15 +444,22 @@
 直ちにブラウザを閉じ、自身の倫理観とユーモアのセンスを根本から見つめ直してください。
 （※冗談です。真面目に生きてください）</span>
 `;
-                await printToConsole(scoldMessage, 5);
+                await type(scoldMessage, 5);
             } else {
-                await printToConsole(`\n<span class="color-critical">[ERROR] ${error.message}</span>\n`, 5);
+                await type(`\n<span class="color-critical">[ERROR] ${error.message}</span>\n`, 5);
             }
         } finally {
             btn.disabled = false;
-            await printToConsole("\nSYSTEM_READY\n<span class='cursor'>_</span>", 1);
+            container.classList.remove('processing');
+            await type("\nSYSTEM_READY\n", 1);
         }
     }
+
+    // <form>送信を捕捉 → Enterキーでも発火する
+    document.getElementById('bmi-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        executeSystem();
+    });
 </script>
 </body>
 </html>
